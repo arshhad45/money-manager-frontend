@@ -29,5 +29,39 @@ A modern, responsive web application for managing personal finances. Track your 
 ##  Installation
 
 1. Clone the repository:
-git clone <repository-url>
-cd frontend
+-git clone <repository-url>
+-cd frontend
+
+3. Install dependencies:
+-npm install
+
+## Environment Configuration
+For Local Development
+Create a .env file in the frontend folder:
+# Optional: Set to use local backendVITE_API_URL=http://localhost:4000
+Note: If you don't create a .env file, the Vite proxy will automatically forward /api requests to http://localhost:4000 during development.
+For Production
+Create a .env.production file:
+VITE_API_URL=https://your-backend-url.onrender.com
+Or set the VITE_API_URL environment variable in your hosting platform's dashboard.
+
+## Development
+Start the development server:
+npm run dev
+The application will be available at http://localhost:5173
+The dev server includes:
+Hot Module Replacement (HMR)
+Automatic API proxying to backend
+Fast refresh for React components
+
+## Building for Production
+Build the production-ready application:
+npm run build
+The optimized build will be in the dist folder.
+Preview the production build locally:
+npm run buildnpm run preview
+
+## Available Scripts
+npm run dev - Start development server
+npm run build - Build for production
+npm run preview - Preview production build locally
