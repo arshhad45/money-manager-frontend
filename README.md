@@ -8,12 +8,12 @@ This frontend consumes a REST API built with Node.js and MongoDB Atlas.
 ##  Live Application
 
 **Frontend (Vercel):**  
-https://money-manager-frontend.vercel.app](https://money-manager-frontend-eight.vercel.app/
+https://money-manager-frontend-eight.vercel.app/
 
 
 
 **Backend API:**  
-https://money-manager-backend.onrender.com](https://money-manager-backend-1-51q8.onrender.com/
+https://money-manager-backend-1-51q8.onrender.com/
 
 
 > Note: The backend is hosted on a free tier. The first request may take a few seconds due to cold start.
