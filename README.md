@@ -38,7 +38,7 @@ A modern, responsive web application for managing personal finances. Track your 
 ## Environment Configuration
 For Local Development
 Create a .env file in the frontend folder:
-# Optional: Set to use local backendVITE_API_URL=http://localhost:4000
+Optional: Set to use local backendVITE_API_URL=http://localhost:4000
 Note: If you don't create a .env file, the Vite proxy will automatically forward /api requests to http://localhost:4000 during development.
 For Production
 Create a .env.production file:
