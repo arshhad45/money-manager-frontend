@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { createTransaction } from "../services/transactions";
+import React, { useState, useEffect } from "react";
+import { createTransaction, updateTransaction } from "../services/transactions";
 
 const defaultForm = {
   type: "income",
@@ -21,11 +21,36 @@ const categories = [
   "other",
 ];
 
-export default function AddTransactionModal({ open, onClose, onSave }) {
+export default function AddTransactionModal({ open, onClose, onSave, transaction = null }) {
+  const isEditMode = !!transaction;
   const [activeTab, setActiveTab] = useState("income");
   const [form, setForm] = useState({ ...defaultForm });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  // Pre-fill form when editing
+  useEffect(() => {
+    if (transaction) {
+      const dateTime = new Date(transaction.occurredAt);
+      const localDateTime = new Date(dateTime.getTime() - dateTime.getTimezoneOffset() * 60000)
+        .toISOString()
+        .slice(0, 16);
+      
+      setForm({
+        type: transaction.type,
+        amount: transaction.amount.toString(),
+        description: transaction.description || "",
+        category: transaction.category || "",
+        division: transaction.division || "personal",
+        occurredAt: localDateTime,
+      });
+      setActiveTab(transaction.type);
+    } else {
+      setForm({ ...defaultForm });
+      setActiveTab("income");
+    }
+    setError("");
+  }, [transaction, open]);
 
   if (!open) return null;
 
@@ -49,7 +74,12 @@ export default function AddTransactionModal({ open, onClose, onSave }) {
 
     try {
       setLoading(true);
-      const created = await createTransaction(payload);
+      
+      if (isEditMode) {
+        await updateTransaction(transaction._id, payload);
+      } else {
+        await createTransaction(payload);
+      }
 
       // Notify parent (for refresh)
       if (onSave) {
@@ -61,7 +91,9 @@ export default function AddTransactionModal({ open, onClose, onSave }) {
       onClose();
     } catch (err) {
       console.error(err);
-      setError("Failed to save transaction. Please try again.");
+      const errorMessage = err.response?.data?.message || 
+        (isEditMode ? "Failed to update transaction. It may be older than 12 hours." : "Failed to save transaction. Please try again.");
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -72,7 +104,7 @@ export default function AddTransactionModal({ open, onClose, onSave }) {
       <div className="w-full max-w-lg rounded-xl bg-white shadow-xl">
         <div className="flex items-center justify-between border-b px-6 py-4">
           <h2 className="text-lg font-semibold text-slate-800">
-            Add Transaction
+            {isEditMode ? "Edit Transaction" : "Add Transaction"}
           </h2>
           <button
             className="rounded-full p-1 text-slate-500 hover:bg-slate-100"
@@ -216,7 +248,7 @@ export default function AddTransactionModal({ open, onClose, onSave }) {
               disabled={loading}
               className="rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white"
             >
-              {loading ? "Saving..." : "Save"}
+              {loading ? (isEditMode ? "Updating..." : "Saving...") : (isEditMode ? "Update" : "Save")}
             </button>
           </div>
         </form>

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { getTransactions, createTransaction } from "./services/transactions";
+import { getTransactions, createTransaction, updateTransaction } from "./services/transactions";
 import { getSummary } from "./services/stats";
 import AddTransactionModal from "./components/AddTransactionModal.jsx";
 
@@ -9,6 +9,15 @@ function formatCurrency(value) {
     currency: "INR",
     maximumFractionDigits: 2,
   }).format(value || 0);
+}
+
+// Check if transaction is editable (within 12 hours)
+function isTransactionEditable(transaction) {
+  if (!transaction || !transaction.createdAt) return false;
+  const now = new Date();
+  const createdAt = new Date(transaction.createdAt);
+  const diffHours = (now - createdAt) / (1000 * 60 * 60);
+  return diffHours <= 12;
 }
 
 export default function App() {
@@ -21,6 +30,7 @@ export default function App() {
     toDate: "",
   });
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingTransaction, setEditingTransaction] = useState(null);
   const [loading, setLoading] = useState(false);
 
   const loadSummary = async () => {
@@ -66,13 +76,34 @@ export default function App() {
 
   const handleSaveTransaction = async (payload) => {
     try {
-      await createTransaction(payload);
+      if (editingTransaction) {
+        await updateTransaction(editingTransaction._id, payload);
+      } else {
+        await createTransaction(payload);
+      }
       setIsModalOpen(false);
+      setEditingTransaction(null);
       await Promise.all([loadSummary(), loadTransactions()]);
     } catch (e) {
       console.error(e);
-      alert("Failed to save transaction");
+      const errorMessage = e.response?.data?.message || 
+        (editingTransaction ? "Failed to update transaction. It may be older than 12 hours." : "Failed to save transaction");
+      alert(errorMessage);
     }
+  };
+
+  const handleEditTransaction = (transaction) => {
+    if (!isTransactionEditable(transaction)) {
+      alert("This transaction cannot be edited. Only transactions within 12 hours can be edited.");
+      return;
+    }
+    setEditingTransaction(transaction);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setEditingTransaction(null);
   };
 
   const categoriesSummary = useMemo(() => {
@@ -97,7 +128,10 @@ export default function App() {
             </p>
           </div>
           <button
-            onClick={() => setIsModalOpen(true)}
+            onClick={() => {
+              setEditingTransaction(null);
+              setIsModalOpen(true);
+            }}
             className="inline-flex items-center gap-2 rounded-full bg-primary-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-primary-600/30 hover:bg-primary-500"
           >
             <span className="text-lg leading-none">＋</span>
@@ -225,13 +259,14 @@ export default function App() {
                       <th className="px-3 py-2">Division</th>
                       <th className="px-3 py-2">Description</th>
                       <th className="px-3 py-2 text-right">Amount</th>
+                      <th className="px-3 py-2 text-center">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {loading ? (
                       <tr>
                         <td
-                          colSpan="6"
+                          colSpan="7"
                           className="px-3 py-6 text-center text-slate-500"
                         >
                           Loading...
@@ -240,7 +275,7 @@ export default function App() {
                     ) : transactions.length === 0 ? (
                       <tr>
                         <td
-                          colSpan="6"
+                          colSpan="7"
                           className="px-3 py-6 text-center text-slate-500"
                         >
                           No transactions yet.
@@ -280,6 +315,21 @@ export default function App() {
                           <td className="px-3 py-2 text-right font-medium">
                             {t.type === "income" ? "+" : "-"}
                             {t.amount.toFixed(2)}
+                          </td>
+                          <td className="px-3 py-2 text-center">
+                            {isTransactionEditable(t) ? (
+                              <button
+                                onClick={() => handleEditTransaction(t)}
+                                className="rounded-md bg-blue-50 px-2 py-1 text-[10px] font-medium text-blue-600 hover:bg-blue-100"
+                                title="Edit transaction (within 12 hours)"
+                              >
+                                Edit
+                              </button>
+                            ) : (
+                              <span className="text-[10px] text-slate-400" title="Cannot edit after 12 hours">
+                                Locked
+                              </span>
+                            )}
                           </td>
                         </tr>
                       ))
@@ -348,8 +398,9 @@ export default function App() {
 
         <AddTransactionModal
           open={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
+          onClose={handleCloseModal}
           onSave={handleSaveTransaction}
+          transaction={editingTransaction}
         />
       </div>
     </div>
