@@ -48,13 +48,13 @@ This repository contains only the frontend of the application.
 
 ##  Project Structure
 
-src/
-├── components/
-├── services/
-│ ├── api.js
-│ └── transactions.js
-├── App.jsx
-└── main.jsx
+-src/
+-├── components/
+-├── services/
+-│ ├── api.js
+-│ └── transactions.js
+-├── App.jsx
+-└── main.jsx
 
 
 ---
