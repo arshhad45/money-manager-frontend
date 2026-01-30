@@ -1,67 +1,87 @@
-# Money Manager - Frontend
+# Money Manager – Frontend
 
-A modern, responsive web application for managing personal finances. Track your income, expenses, and financial transactions with an intuitive dashboard and powerful filtering capabilities.
+A responsive Money Manager web application frontend that allows users to manage income and expenses, categorize transactions, and view financial data over time.  
+This frontend consumes a REST API built with Node.js and MongoDB Atlas.
 
-##  Features
+---
 
-- **Dashboard Overview**: View monthly, weekly, and yearly income and expense summaries
-- **Transaction Management**: Add income and expenses with detailed categorization
-- **Advanced Filtering**: Filter transactions by division (Personal/Office), category, and date range
-- **Category Summary**: See spending breakdown by category
-- **Transaction History**: View all transactions in a sortable, filterable table
-- **Responsive Design**: Beautiful UI built with TailwindCSS that works on all devices
-- **Real-time Updates**: Instant reflection of changes across the application
+##  Live Application
+
+**Frontend (Vercel):**  
+[https://money-manager-frontend.vercel.app](https://money-manager-frontend-eight.vercel.app/
+
+)
+
+**Backend API:**  
+[https://money-manager-backend.onrender.com](https://money-manager-backend-1-51q8.onrender.com/
+)
+
+> Note: The backend is hosted on a free tier. The first request may take a few seconds due to cold start.
+
+---
+
+##  Project Overview
+
+The Money Manager application helps users:
+
+- Add income and expense transactions  
+- Categorize transactions (food, fuel, medical, etc.)  
+- Separate transactions into Personal and Office divisions  
+- Track transactions with date and time  
+- View transaction history  
+- Enforce a 12-hour edit restriction (handled by backend)  
+- Prepare data for weekly, monthly, and yearly summaries  
+
+This repository contains only the frontend of the application.
+
+---
 
 ##  Tech Stack
 
-- **React 18** - UI library
-- **Vite** - Build tool and dev server
-- **TailwindCSS** - Utility-first CSS framework
-- **Axios** - HTTP client for API requests
-- **React SWC** - Fast React refresh
+- React.js  
+- Vite  
+- Tailwind CSS  
+- Axios  
+- Vercel  
 
-##  Prerequisites
+---
 
-- Node.js (v16 or higher)
-- npm or yarn
-- Backend API running (see backend repository)
+##  Project Structure
 
-##  Installation
+src/
+├── components/
+├── services/
+│ ├── api.js
+│ └── transactions.js
+├── App.jsx
+└── main.jsx
 
-1. Clone the repository:
--git clone <repository-url>
--cd frontend
 
-3. Install dependencies:
--npm install
+---
 
-## Environment Configuration
-For Local Development
-Create a .env file in the frontend folder:
-Optional: Set to use local backendVITE_API_URL=http://localhost:4000
-Note: If you don't create a .env file, the Vite proxy will automatically forward /api requests to http://localhost:4000 during development.
-For Production
-Create a .env.production file:
-VITE_API_URL=https://your-backend-url.onrender.com
-Or set the VITE_API_URL environment variable in your hosting platform's dashboard.
+##  Environment Variables
 
-## Development
+The frontend uses environment variables for backend configuration.
+
+### Local Development
+
+Create a `.env` file in the project root:
+
+```env
+VITE_API_URL=https://money-manager-backend.onrender.com
+.env is ignored and not committed to GitHub.
+
+ Running Locally
+Clone the repository:
+
+git clone https://github.com/<your-username>/money-manager-frontend.git
+cd money-manager-frontend
+Install dependencies:
+
+npm install
 Start the development server:
+
 npm run dev
-The application will be available at http://localhost:5173
-The dev server includes:
-Hot Module Replacement (HMR)
-Automatic API proxying to backend
-Fast refresh for React components
+The app will be available at:
 
-## Building for Production
-Build the production-ready application:
-npm run build
-The optimized build will be in the dist folder.
-Preview the production build locally:
-npm run buildnpm run preview
-
-## Available Scripts
-npm run dev - Start development server
-npm run build - Build for production
-npm run preview - Preview production build locally
+http://localhost:5173
