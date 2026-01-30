@@ -8,6 +8,8 @@ const defaultForm = {
   category: "",
   division: "personal",
   occurredAt: "",
+  fromAccount: "",
+  toAccount: "",
 };
 
 const categories = [
@@ -21,7 +23,7 @@ const categories = [
   "other",
 ];
 
-export default function AddTransactionModal({ open, onClose, onSave, transaction = null }) {
+export default function AddTransactionModal({ open, onClose, onSave, transaction = null, accounts = [] }) {
   const isEditMode = !!transaction;
   const [activeTab, setActiveTab] = useState("income");
   const [form, setForm] = useState({ ...defaultForm });
@@ -43,6 +45,8 @@ export default function AddTransactionModal({ open, onClose, onSave, transaction
         category: transaction.category || "",
         division: transaction.division || "personal",
         occurredAt: localDateTime,
+        fromAccount: transaction.fromAccount?._id || transaction.fromAccount || "",
+        toAccount: transaction.toAccount?._id || transaction.toAccount || "",
       });
       setActiveTab(transaction.type);
     } else {
@@ -63,6 +67,18 @@ export default function AddTransactionModal({ open, onClose, onSave, transaction
     e.preventDefault();
     setError("");
 
+    // Validation for transfer
+    if (activeTab === "transfer") {
+      if (!form.fromAccount || !form.toAccount) {
+        setError("Please select both from and to accounts for transfer");
+        return;
+      }
+      if (form.fromAccount === form.toAccount) {
+        setError("From and to accounts must be different");
+        return;
+      }
+    }
+
     const payload = {
       ...form,
       type: activeTab,
@@ -71,6 +87,20 @@ export default function AddTransactionModal({ open, onClose, onSave, transaction
         ? new Date(form.occurredAt).toISOString()
         : new Date().toISOString(),
     };
+
+    // Handle account fields based on transaction type
+    if (activeTab === "income") {
+      payload.toAccount = form.toAccount || null;
+      payload.fromAccount = null;
+    } else if (activeTab === "expense") {
+      payload.fromAccount = form.fromAccount || null;
+      payload.toAccount = null;
+    } else if (activeTab === "transfer") {
+      payload.fromAccount = form.fromAccount || null;
+      payload.toAccount = form.toAccount || null;
+      payload.category = "transfer"; // Transfer doesn't need category
+      payload.division = form.division || "personal"; // Keep division for transfer
+    }
 
     try {
       setLoading(true);
@@ -88,6 +118,7 @@ export default function AddTransactionModal({ open, onClose, onSave, transaction
 
       setForm({ ...defaultForm });
       setActiveTab("income");
+      setError("");
       onClose();
     } catch (err) {
       console.error(err);
@@ -137,6 +168,17 @@ export default function AddTransactionModal({ open, onClose, onSave, transaction
             disabled={loading}
           >
             Expense
+          </button>
+          <button
+            className={`flex-1 border-b-2 py-2 text-center text-sm font-medium ${
+              activeTab === "transfer"
+                ? "border-blue-600 text-blue-600"
+                : "border-transparent text-slate-500 hover:text-slate-700"
+            }`}
+            onClick={() => setActiveTab("transfer")}
+            disabled={loading}
+          >
+            Transfer
           </button>
         </div>
 
@@ -195,44 +237,113 @@ export default function AddTransactionModal({ open, onClose, onSave, transaction
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="mb-1 block text-xs font-medium text-slate-600">
-                Category
-              </label>
-              <select
-                name="category"
-                value={form.category}
-                onChange={handleChange}
-                required
-                disabled={loading}
-                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
-              >
-                <option value="">Select category</option>
-                {categories.map((c) => (
-                  <option key={c} value={c}>
-                    {c[0].toUpperCase() + c.slice(1)}
-                  </option>
-                ))}
-              </select>
+          {activeTab === "transfer" ? (
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="mb-1 block text-xs font-medium text-slate-600">
+                  From Account
+                </label>
+                <select
+                  name="fromAccount"
+                  value={form.fromAccount}
+                  onChange={handleChange}
+                  required
+                  disabled={loading}
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                >
+                  <option value="">Select account</option>
+                  {accounts.map((acc) => (
+                    <option key={acc._id} value={acc._id}>
+                      {acc.name} ({acc.type}) - ₹{acc.balance?.toFixed(2) || "0.00"}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-slate-600">
+                  To Account
+                </label>
+                <select
+                  name="toAccount"
+                  value={form.toAccount}
+                  onChange={handleChange}
+                  required
+                  disabled={loading}
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                >
+                  <option value="">Select account</option>
+                  {accounts
+                    .filter((acc) => acc._id !== form.fromAccount)
+                    .map((acc) => (
+                      <option key={acc._id} value={acc._id}>
+                        {acc.name} ({acc.type}) - ₹{acc.balance?.toFixed(2) || "0.00"}
+                      </option>
+                    ))}
+                </select>
+              </div>
             </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-slate-600">
+                    Category
+                  </label>
+                  <select
+                    name="category"
+                    value={form.category}
+                    onChange={handleChange}
+                    required
+                    disabled={loading}
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                  >
+                    <option value="">Select category</option>
+                    {categories.map((c) => (
+                      <option key={c} value={c}>
+                        {c[0].toUpperCase() + c.slice(1)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-            <div>
-              <label className="mb-1 block text-xs font-medium text-slate-600">
-                Division
-              </label>
-              <select
-                name="division"
-                value={form.division}
-                onChange={handleChange}
-                disabled={loading}
-                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
-              >
-                <option value="personal">Personal</option>
-                <option value="office">Office</option>
-              </select>
-            </div>
-          </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-slate-600">
+                    Division
+                  </label>
+                  <select
+                    name="division"
+                    value={form.division}
+                    onChange={handleChange}
+                    disabled={loading}
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                  >
+                    <option value="personal">Personal</option>
+                    <option value="office">Office</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="mb-1 block text-xs font-medium text-slate-600">
+                  {activeTab === "income" ? "To Account" : "From Account"} (Optional)
+                </label>
+                <select
+                  name={activeTab === "income" ? "toAccount" : "fromAccount"}
+                  value={activeTab === "income" ? form.toAccount : form.fromAccount}
+                  onChange={handleChange}
+                  disabled={loading}
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                >
+                  <option value="">No account</option>
+                  {accounts.map((acc) => (
+                    <option key={acc._id} value={acc._id}>
+                      {acc.name} ({acc.type}) - ₹{acc.balance?.toFixed(2) || "0.00"}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </>
+          )}
 
           <div className="flex justify-end gap-3 pt-2">
             <button

@@ -1,7 +1,9 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { getTransactions, createTransaction, updateTransaction } from "./services/transactions";
 import { getSummary } from "./services/stats";
+import { getAccounts } from "./services/accounts";
 import AddTransactionModal from "./components/AddTransactionModal.jsx";
+import AccountManagement from "./components/AccountManagement.jsx";
 
 function formatCurrency(value) {
   return new Intl.NumberFormat("en-IN", {
@@ -23,6 +25,7 @@ function isTransactionEditable(transaction) {
 export default function App() {
   const [summary, setSummary] = useState({ month: {}, week: {}, year: {} });
   const [transactions, setTransactions] = useState([]);
+  const [accounts, setAccounts] = useState([]);
   const [filters, setFilters] = useState({
     division: "",
     category: "",
@@ -37,6 +40,15 @@ export default function App() {
     try {
       const data = await getSummary();
       setSummary(data);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const loadAccounts = async () => {
+    try {
+      const data = await getAccounts();
+      setAccounts(data);
     } catch (e) {
       console.error(e);
     }
@@ -63,6 +75,7 @@ export default function App() {
   useEffect(() => {
     loadSummary();
     loadTransactions();
+    loadAccounts();
   }, []);
 
   const handleFilterChange = (e) => {
@@ -83,7 +96,7 @@ export default function App() {
       }
       setIsModalOpen(false);
       setEditingTransaction(null);
-      await Promise.all([loadSummary(), loadTransactions()]);
+      await Promise.all([loadSummary(), loadTransactions(), loadAccounts()]);
     } catch (e) {
       console.error(e);
       const errorMessage = e.response?.data?.message || 
@@ -311,9 +324,24 @@ export default function App() {
                           </td>
                           <td className="px-3 py-2">
                             {t.description || "-"}
+                            {t.type === "transfer" && (
+                              <div className="text-[10px] text-slate-400 mt-0.5">
+                                {t.fromAccount?.name || "Account"} → {t.toAccount?.name || "Account"}
+                              </div>
+                            )}
+                            {(t.type === "income" && t.toAccount) && (
+                              <div className="text-[10px] text-slate-400 mt-0.5">
+                                → {t.toAccount?.name || "Account"}
+                              </div>
+                            )}
+                            {(t.type === "expense" && t.fromAccount) && (
+                              <div className="text-[10px] text-slate-400 mt-0.5">
+                                ← {t.fromAccount?.name || "Account"}
+                              </div>
+                            )}
                           </td>
                           <td className="px-3 py-2 text-right font-medium">
-                            {t.type === "income" ? "+" : "-"}
+                            {t.type === "income" ? "+" : t.type === "transfer" ? "↔" : "-"}
                             {t.amount.toFixed(2)}
                           </td>
                           <td className="px-3 py-2 text-center">
@@ -341,6 +369,8 @@ export default function App() {
           </section>
 
           <aside className="space-y-4">
+            <AccountManagement accounts={accounts} onAccountCreated={loadAccounts} />
+
             <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-100">
               <h2 className="mb-2 text-sm font-semibold text-slate-800">
                 Category Summary
@@ -401,6 +431,7 @@ export default function App() {
           onClose={handleCloseModal}
           onSave={handleSaveTransaction}
           transaction={editingTransaction}
+          accounts={accounts}
         />
       </div>
     </div>
