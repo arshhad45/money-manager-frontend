@@ -2,7 +2,7 @@
 
 A modern, responsive web application for managing personal finances. Track your income, expenses, and financial transactions with an intuitive dashboard and powerful filtering capabilities.
 
-## 🚀 Features
+##  Features
 
 - **Dashboard Overview**: View monthly, weekly, and yearly income and expense summaries
 - **Transaction Management**: Add income and expenses with detailed categorization
