@@ -1,0 +1,15 @@
+Github repository URL(backend) : https://github.com/arshhad45/money-manager-backend
+
+Github repository URL(Frontend) : https://github.com/arshhad45/money-manager-frontend
+
+Live Frontend URL: https://money-manager-frontend-eight.vercel.app/
+
+Live Backend URL : https://money-manager-backend-1-51q8.onrender.com/
+
+Last Commit Hash (Frontend) : 9463cd6d7632f205985ec9e6cd2a0698907ac684
+
+Last Commit Hash (Backend) : 40a56c6364104e7746734faa8b9d0fabacb74ff0
+
+Live web : https://money-manager-frontend-eight.vercel.app/
+
+video link : https://drive.google.com/file/d/1j6z2Tq_RCn66uAd08bsrl7uilGt1kpHo/view?usp=sharing
