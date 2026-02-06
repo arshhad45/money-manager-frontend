@@ -48,3 +48,78 @@ Transfer money between accounts
 See balances update automatically
 ## Result
 The app centralizes personal and business financial data, supports quick corrections, and provides a clear view of spending and income through filters, summaries, and account tracking, making financial management simpler and more accurate.
+## Project overview
+# Money Manager - Frontend
+Here’s a frontend-only README you can paste into frontend/README.md:
+# Money Manager - Frontend
+
+A React-based frontend for the Money Manager personal finance web application. Tracks income, expenses, and transfers with a responsive UI built using TailwindCSS.
+
+## Features
+
+- **Dashboard** – Monthly, weekly, and yearly income & expense summaries
+- **Add Transaction Modal** – Income, Expense, and Transfer tabs with date, description, category, division, and account selection
+- **Transaction History** – Table with filters by division, category, and date range
+- **Edit** – Edit transactions within 12 hours (button hidden after 12 hours)
+- **Category Summary** – Spending breakdown by category
+- **Account Management** – Create accounts and view balances
+- **Account Selection** – Link income/expense to accounts; transfer between accounts
+
+## Tech Stack
+
+- **React 18**
+- **Vite**
+- **TailwindCSS**
+- **Axios**
+
+## Prerequisites
+
+- Node.js (v16 or higher)
+- npm or yarn
+
+## Installation
+
+npm install
+
+##Money Manager - Frontend
+A React-based frontend for the Money Manager personal finance web application. Tracks income, expenses, and transfers with a responsive UI built using TailwindCSS.
+## Features- **Dashboard** – Monthly, weekly, and yearly income & expense summaries- **Add Transaction Modal** – Income, Expense, and Transfer tabs with date, description, category, division, and account selection- 
+**Transaction History** – Table with filters by division, category, and date range-
+**Edit** – Edit transactions within 12 hours (button hidden after 12 hours)-
+**Category Summary** – Spending breakdown by category- **Account Management** – Create accounts and view balances- 
+**Account Selection** – Link income/expense to accounts; transfer between accounts## Tech Stack- 
+**React 18**- **Vite**- **TailwindCSS**- **Axios**## Prerequisites- Node.js (v16 or higher)- npm or yarn
+## Installationnpm install
+Environment Variables
+Create a .env file for local development:
+VITE_API_URL=http://localhost:4000
+VITE_API_URL=http://localhost:4000
+For production, create .env.production:
+VITE_API_URL=https://your-backend-api-url.com
+VITE_API_URL=https://your-backend-api-url.com
+Or set VITE_API_URL in your hosting platform's environment settings.
+## Available Scripts
+Command	Description
+npm run dev	Start development server (default: http://localhost:5173)
+npm run build	Build for production
+npm run preview	Preview production build locally
+## Project Structure
+## frontend/
+
+├── src/
+│   ├── components/       # React components
+│   │   ├── AddTransactionModal.jsx
+│   │   └── AccountManagement.jsx
+│   ├── services/         # API service layer
+│   │   ├── api.js
+│   │   ├── transactions.js
+│   │   ├── accounts.js
+│   │   └── stats.js
+│   ├── App.jsx
+│   ├── main.jsx
+│   └── index.css
+├── index.html
+├── vite.config.mts
+├── tailwind.config.mjs
+├── postcss.config.mjs
+└── package.json
