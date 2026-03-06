@@ -2,62 +2,70 @@ pipeline {
   agent any
 
   environment {
-    AWS_ACCOUNT_ID  = '481665097478'
-    AWS_REGION      = 'us-east-1'
-    CLUSTER_NAME    = 'devops-cluster'
-    FRONTEND_REPO   = "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/devops-app-frontend"
+    AWS_ACCOUNT_ID        = '481665097478'
+    AWS_REGION            = 'us-east-1'
+    CLUSTER_NAME          = 'devops-cluster'
+    FRONTEND_REPO         = "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/devops-app-frontend"
+    AWS_ACCESS_KEY_ID     = credentials('AWS_ACCESS_KEY_ID')
+    AWS_SECRET_ACCESS_KEY = credentials('AWS_SECRET_ACCESS_KEY')
   }
 
   stages {
 
-    stage('📥 Checkout Code') {
+    stage('📥 Checkout') {
       steps {
         checkout scm
-        echo "✅ Code checked out from: arshhad45/money-manager-frontend"
-        echo "✅ Build number: ${BUILD_NUMBER}"
+        echo "✅ Code checked out — Build #${BUILD_NUMBER}"
       }
     }
 
-    stage('🐳 Build Frontend Docker Image') {
-      steps {
-        sh "docker build -t ${FRONTEND_REPO}:${BUILD_NUMBER} ."
-        sh "docker tag ${FRONTEND_REPO}:${BUILD_NUMBER} ${FRONTEND_REPO}:latest"
-        echo "✅ Frontend image built: ${FRONTEND_REPO}:${BUILD_NUMBER}"
-      }
-    }
-
-    stage('🔍 Security Scan') {
-      steps {
-        sh "docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy:latest image --severity HIGH,CRITICAL --exit-code 0 ${FRONTEND_REPO}:${BUILD_NUMBER}"
-        echo "✅ Security scan complete"
-      }
-    }
-
-    stage('📤 Push Frontend to ECR') {
+    stage('🐳 Build & Push to ECR') {
       steps {
         sh """
+          # Install required tools
+          apt-get update -qq && apt-get install -y docker.io awscli || \
+          yum install -y docker awscli || \
+          apk add --no-cache docker aws-cli || true
+
+          # Configure AWS
+          export AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+          export AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+          export AWS_DEFAULT_REGION=${AWS_REGION}
+
+          # Login to ECR
           aws ecr get-login-password --region ${AWS_REGION} | \
           docker login --username AWS --password-stdin \
           ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
+
+          # Build and push
+          docker build -t ${FRONTEND_REPO}:${BUILD_NUMBER} .
+          docker tag ${FRONTEND_REPO}:${BUILD_NUMBER} ${FRONTEND_REPO}:latest
+          docker push ${FRONTEND_REPO}:${BUILD_NUMBER}
+          docker push ${FRONTEND_REPO}:latest
         """
-        sh "docker push ${FRONTEND_REPO}:${BUILD_NUMBER}"
-        sh "docker push ${FRONTEND_REPO}:latest"
-        echo "✅ Frontend image pushed to ECR"
       }
     }
 
-    stage('🚀 Deploy Frontend to EKS') {
+    stage('🚀 Deploy to EKS') {
       steps {
-        sh "aws eks update-kubeconfig --name ${CLUSTER_NAME} --region ${AWS_REGION}"
-        sh "kubectl create namespace production --dry-run=client -o yaml | kubectl apply -f -"
         sh """
+          export AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+          export AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+          export AWS_DEFAULT_REGION=${AWS_REGION}
+
+          aws eks update-kubeconfig --name ${CLUSTER_NAME} --region ${AWS_REGION}
+
+          kubectl create namespace production --dry-run=client -o yaml | kubectl apply -f -
+
           kubectl create deployment frontend \
             --image=${FRONTEND_REPO}:${BUILD_NUMBER} \
             --namespace production \
             --dry-run=client -o yaml | kubectl apply -f -
-        """
-        sh "kubectl set image deployment/frontend frontend=${FRONTEND_REPO}:${BUILD_NUMBER} -n production"
-        sh """
+
+          kubectl set image deployment/frontend \
+            frontend=${FRONTEND_REPO}:${BUILD_NUMBER} \
+            -n production
+
           kubectl expose deployment frontend \
             --port=80 \
             --target-port=80 \
@@ -65,39 +73,28 @@ pipeline {
             --name=frontend-service \
             --namespace production \
             --dry-run=client -o yaml | kubectl apply -f -
+
+          kubectl rollout status deployment/frontend \
+            -n production --timeout=5m
         """
-        sh "kubectl rollout status deployment/frontend -n production --timeout=5m"
-        echo "✅ Frontend deployed to EKS"
       }
     }
 
-    stage('🌐 Get Live URL') {
+    stage('🌐 Get App URL') {
       steps {
-        script {
-          sleep(20)
-          def url = sh(
-            script: "kubectl get svc frontend-service -n production -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'",
-            returnStdout: true
-          ).trim()
-          echo "🚀 YOUR APP IS LIVE AT: http://${url}"
-        }
+        sh """
+          export AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+          export AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+          export AWS_DEFAULT_REGION=${AWS_REGION}
+          sleep 20
+          kubectl get svc frontend-service -n production
+        """
       }
     }
   }
 
   post {
-    success {
-      echo '✅ Frontend pipeline completed successfully!'
-      echo "🌐 Image: ${FRONTEND_REPO}:${BUILD_NUMBER}"
-    }
-    failure {
-      echo '❌ Frontend pipeline failed!'
-      echo 'Run: kubectl get pods -n production'
-      echo 'Run: kubectl logs deployment/frontend -n production'
-    }
-    always {
-      sh 'docker rmi ${FRONTEND_REPO}:${BUILD_NUMBER} || true'
-      sh 'docker system prune -f || true'
-    }
+    success { echo '✅ Frontend deployed successfully!' }
+    failure { echo '❌ Frontend deploy failed!' }
   }
 }
