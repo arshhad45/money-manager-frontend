@@ -6,12 +6,11 @@ apiVersion: v1
 kind: Pod
 spec:
   containers:
-  - name: jenkins-agent
+  - name: jnlp
     image: jenkins/inbound-agent:latest
-    command:
-    - sleep
-    args:
-    - infinity
+    volumeMounts:
+    - mountPath: /home/jenkins/agent
+      name: workspace-volume
   - name: docker
     image: docker:dind
     securityContext:
@@ -19,18 +18,21 @@ spec:
     env:
     - name: DOCKER_TLS_CERTDIR
       value: ""
-  - name: aws
-    image: "alpine/k8s:1.28.0"
+    volumeMounts:
+    - mountPath: /home/jenkins/agent
+      name: workspace-volume
+  - name: tools
+    image: alpine/k8s:1.28.0
     command:
     - sleep
     args:
     - infinity
-  - name: kubectl
-    image: "alpine/k8s:1.28.0"
-    command:
-    - sleep
-    args:
-    - infinity
+    volumeMounts:
+    - mountPath: /home/jenkins/agent
+      name: workspace-volume
+  volumes:
+  - name: workspace-volume
+    emptyDir: {}
 """
     }
   }
@@ -48,10 +50,8 @@ spec:
 
     stage('📥 Checkout') {
       steps {
-        container('jenkins-agent') {
-          checkout scm
-          echo "✅ Code checked out — Build #${BUILD_NUMBER}"
-        }
+        checkout scm
+        echo "✅ Code checked out — Build #${BUILD_NUMBER}"
       }
     }
 
@@ -61,28 +61,41 @@ spec:
           sh """
             sleep 5
             docker info
-            apk add --no-cache aws-cli || true
+
+            apk add --no-cache aws-cli
+
+            export AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+            export AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+            export AWS_DEFAULT_REGION=${AWS_REGION}
+
             aws ecr get-login-password --region ${AWS_REGION} | \
             docker login --username AWS --password-stdin \
             ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
+
             docker build -t ${FRONTEND_REPO}:${BUILD_NUMBER} .
             docker tag ${FRONTEND_REPO}:${BUILD_NUMBER} ${FRONTEND_REPO}:latest
             docker push ${FRONTEND_REPO}:${BUILD_NUMBER}
             docker push ${FRONTEND_REPO}:latest
+
+            echo "✅ Image pushed to ECR successfully!"
           """
         }
       }
     }
 
     stage('🚀 Deploy to EKS') {
-  steps {
-    container('kubectl') {
-      sh """
-        aws eks update-kubeconfig --name ${CLUSTER_NAME} --region ${AWS_REGION}
+      steps {
+        container('tools') {
+          sh """
+            export AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+            export AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+            export AWS_DEFAULT_REGION=${AWS_REGION}
 
-        kubectl create namespace production --dry-run=client -o yaml | kubectl apply -f -
+            aws eks update-kubeconfig --name ${CLUSTER_NAME} --region ${AWS_REGION}
 
-        cat <<'EOF' | kubectl apply -f -
+            kubectl create namespace production --dry-run=client -o yaml | kubectl apply -f -
+
+            cat <<EOF | kubectl apply -f -
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -103,6 +116,18 @@ spec:
         image: ${FRONTEND_REPO}:${BUILD_NUMBER}
         ports:
         - containerPort: 80
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 10
+          periodSeconds: 5
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 20
+          periodSeconds: 10
 ---
 apiVersion: v1
 kind: Service
@@ -117,18 +142,26 @@ spec:
   - port: 80
     targetPort: 80
 EOF
-        kubectl rollout status deployment/frontend -n production --timeout=5m
-      """
+
+            kubectl rollout status deployment/frontend -n production --timeout=5m
+            echo "✅ Frontend deployed successfully!"
+          """
+        }
+      }
     }
-  }
-}
 
     stage('🌐 Get App URL') {
       steps {
-        container('kubectl') {
+        container('tools') {
           sh """
-            sleep 20
+            export AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+            export AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+            export AWS_DEFAULT_REGION=${AWS_REGION}
+
+            echo "⏳ Waiting for LoadBalancer URL..."
+            sleep 30
             kubectl get svc frontend-service -n production
+            echo "✅ Your app URL is shown above under EXTERNAL-IP!"
           """
         }
       }
@@ -136,7 +169,7 @@ EOF
   }
 
   post {
-    success { echo '✅ Frontend deployed successfully!' }
-    failure { echo '❌ Frontend deploy failed!' }
+    success { echo '✅ Frontend pipeline completed successfully!' }
+    failure { echo '❌ Frontend pipeline failed!' }
   }
 }
