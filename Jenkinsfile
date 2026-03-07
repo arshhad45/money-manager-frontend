@@ -20,7 +20,7 @@ spec:
     - name: DOCKER_TLS_CERTDIR
       value: ""
   - name: aws
-    image: amazon/aws-cli:latest
+    image: "alpine/k8s:1.28.0"
     command:
     - sleep
     args:
@@ -75,20 +75,14 @@ spec:
     }
 
     stage('🚀 Deploy to EKS') {
-      steps {
-        container('aws') {
-          sh """
-            aws eks update-kubeconfig \
-              --name ${CLUSTER_NAME} \
-              --region ${AWS_REGION}
-          """
-        }
-        container('kubectl') {
-          sh """
-            kubectl create namespace production \
-              --dry-run=client -o yaml | kubectl apply -f -
+  steps {
+    container('kubectl') {
+      sh """
+        aws eks update-kubeconfig --name ${CLUSTER_NAME} --region ${AWS_REGION}
 
-            cat <<EOF | kubectl apply -f -
+        kubectl create namespace production --dry-run=client -o yaml | kubectl apply -f -
+
+        cat <<'EOF' | kubectl apply -f -
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -109,12 +103,6 @@ spec:
         image: ${FRONTEND_REPO}:${BUILD_NUMBER}
         ports:
         - containerPort: 80
-        readinessProbe:
-          httpGet:
-            path: /
-            port: 80
-          initialDelaySeconds: 10
-          periodSeconds: 5
 ---
 apiVersion: v1
 kind: Service
@@ -129,12 +117,11 @@ spec:
   - port: 80
     targetPort: 80
 EOF
-            kubectl rollout status deployment/frontend \
-              -n production --timeout=5m
-          """
-        }
-      }
+        kubectl rollout status deployment/frontend -n production --timeout=5m
+      """
     }
+  }
+}
 
     stage('🌐 Get App URL') {
       steps {
