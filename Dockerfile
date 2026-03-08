@@ -10,6 +10,9 @@ COPY . .
 ARG VITE_API_URL
 ENV VITE_API_URL=$VITE_API_URL
 
+# Define Vite environment variable BEFORE build
+ENV VITE_API_URL=http://18.208.134.172:5000
+
 RUN npm run build
 
 FROM nginx:alpine
