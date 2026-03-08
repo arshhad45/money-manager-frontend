@@ -11,10 +11,13 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                sh 'docker build -t money-frontend .'
+                sh '''
+                docker build \
+                --build-arg VITE_API_URL=http://18.208.134.172:5000 \
+                -t money-frontend .
+                '''
             }
         }
-
         stage('Deploy Frontend Container') {
             steps {
                 sh 'docker rm -f frontend-container || true'
