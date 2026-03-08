@@ -3,12 +3,11 @@ pipeline {
 
  stages {
 
-  stage('Clone Frontend Repo') {
-   steps {
-    git 'https://github.com/arshhad45/money-manager-frontend.git'
-   }
-  }
-
+stage('Clone Backend Repo') {
+    steps {
+        git branch: 'main', url: 'https://github.com/arshhad45/money-manager-frontend.git'
+    }
+}
   stage('Install Dependencies') {
    steps {
     sh 'npm install'
