@@ -6,12 +6,13 @@ COPY package*.json ./
 RUN npm install
 
 COPY . .
+
+ENV VITE_API_URL=http://18.208.134.172:5000
+
 RUN npm run build
 
 FROM nginx:alpine
-
-COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /app/dist /usr/share/nginx/html
 
 EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
+CMD ["nginx","-g","daemon off;"]
